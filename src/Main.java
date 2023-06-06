@@ -1,17 +1,160 @@
-// Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
-// then press Enter. You can now see whitespace characters in your code.
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Scanner;
+
 public class Main {
+
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     public static void main(String[] args) {
-        // Press Alt+Enter with your caret at the highlighted text to see how
-        // IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter the path of the directory:");
+        String inputPath = scanner.nextLine();
 
-        // Press Shift+F10 or click the green arrow button in the gutter to run the code.
-        for (int i = 1; i <= 5; i++) {
+        try {
+            Path dirPath = Paths.get(inputPath);
+            if (!Files.isDirectory(dirPath)) {
+                System.out.println("Directory path not found");
+                return;
+            }
 
-            // Press Shift+F9 to start debugging your code. We have set one breakpoint
-            // for you, but you can always add more by pressing Ctrl+F8.
-            System.out.println("i = " + i);
+            boolean exit = false;
+            while (!exit) {
+                System.out.println("\nSelect an option:");
+                System.out.println("1. Display directory contents");
+                System.out.println("2. Copy a file");
+                System.out.println("3. Move a file");
+                System.out.println("4. Delete a file");
+                System.out.println("5. Create a directory");
+                System.out.println("6. Delete a directory");
+                System.out.println("7. Search for a file");
+                System.out.println("8. Exit");
+
+                int choice = scanner.nextInt();
+                scanner.nextLine(); // Consume newline character
+
+                switch (choice) {
+                    case 1:
+                        displayDirectoryContents(dirPath);
+                        break;
+                    case 2:
+                        System.out.println("Enter the source file name:");
+                        String sourceFile = scanner.nextLine();
+                        System.out.println("Enter the target file name:");
+                        String targetFile = scanner.nextLine();
+                        copyFile(dirPath.resolve(sourceFile), dirPath.resolve(targetFile));
+                        break;
+                    case 3:
+                        System.out.println("Enter the source file name:");
+                        String srcFile = scanner.nextLine();
+                        System.out.println("Enter the target file name:");
+                        String tgtFile = scanner.nextLine();
+                        moveFile(dirPath.resolve(srcFile), dirPath.resolve(tgtFile));
+                        break;
+                    case 4:
+                        System.out.println("Enter the file name to delete:");
+                        String fileToDelete = scanner.nextLine();
+                        deleteFile(dirPath.resolve(fileToDelete));
+                        break;
+                    case 5:
+                        System.out.println("Enter the name of the new directory:");
+                        String newDir = scanner.nextLine();
+                        createDirectory(dirPath.resolve(newDir));
+                        break;
+                    case 6:
+                        System.out.println("Enter the name of the directory to delete:");
+                        String dirToDelete = scanner.nextLine();
+                        deleteDirectory(dirPath.resolve(dirToDelete));
+                        break;
+                    case 7:
+                        System.out.println("Enter the file name or extension to search for:");
+                        String searchTerm = scanner.nextLine();
+                        searchFiles(dirPath, searchTerm);
+                        break;
+                    case 8:
+                        exit = true;
+                        break;
+                    default:
+                        System.out.println("Invalid option.");
+                }
+            }
+        } catch (InvalidPathException e) {
+            System.out.println("Invalid path: " + e.getMessage());
+        }
+    }
+
+    private static void displayDirectoryContents(Path dirPath) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dirPath)) {
+            System.out.println("\nDirectory contents:");
+            for (Path entry : stream) {
+                BasicFileAttributes attrs = Files.readAttributes(entry, BasicFileAttributes.class);
+                String type = attrs.isDirectory() ? "DIR" : "FILE";
+                long size = attrs.size();
+                LocalDateTime lastModified = LocalDateTime.ofInstant(attrs.lastModifiedTime().toInstant(), ZoneOffset.UTC);
+                System.out.printf("%-10s %-10d %-20s %s%n", type, size, lastModified.format(formatter), entry.getFileName());
+            }
+        } catch (IOException e) {
+            System.out.println("Unable to read directory contents: " + e.getMessage());
+        }
+    }
+
+    private static void copyFile(Path source, Path target) {
+        try {
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("File copied successfully.");
+        } catch (IOException e) {
+            System.out.println("Unable to copy file: " + e.getMessage());
+        }
+    }
+
+    private static void moveFile(Path source, Path target) {
+        try {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("File moved successfully.");
+        } catch (IOException e) {
+            System.out.println("Unable to move file: " + e.getMessage());
+        }
+    }
+
+    private static void deleteFile(Path file) {
+        try {
+            Files.delete(file);
+            System.out.println("File deleted successfully.");
+        } catch (IOException e) {
+            System.out.println("Unable to delete file: " + e.getMessage());
+        }
+    }
+
+    private static void createDirectory(Path dir) {
+        try {
+            Files.createDirectory(dir);
+            System.out.println("Directory created successfully.");
+        } catch (IOException e) {
+            System.out.println("Unable to create directory: " + e.getMessage());
+        }
+    }
+
+    private static void deleteDirectory(Path dir) {
+        try {
+            Files.delete(dir);
+            System.out.println("Directory deleted successfully.");
+        } catch (IOException e) {
+            System.out.println("Unable to delete directory: " + e.getMessage());
+        }
+    }
+
+    private static void searchFiles(Path dir, String searchTerm) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, searchTerm)) {
+            System.out.println("\nSearch results:");
+            for (Path entry : stream) {
+                System.out.println(entry.getFileName());
+            }
+        } catch (IOException e) {
+            System.out.println("Unable to search for files: " + e.getMessage());
         }
     }
 }
